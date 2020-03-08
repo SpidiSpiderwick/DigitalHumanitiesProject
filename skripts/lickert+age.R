@@ -1,3 +1,4 @@
+#by Christopher Penndorf
 library(haven)
 library(data.table)
 library(ggplot2)
@@ -10,6 +11,7 @@ database2016 <- database[!(database$year!=2016),]
 database2006 <- database[!(database$year!=2006),]
 items <- c("age","mp02","mp03","mp04","mp05","mp06","mp07","mp08")
 
+#create lickert scale
 database2016[database2016 == -9] <- NA
 database2016$age[database2016$age == -32] <- NA
 database2006[database2006 == -9] <- NA
@@ -21,20 +23,23 @@ database2006$mp04 = 7 + 1 - database2006$mp04
 database2006$mp04 = 7 + 1 - database2006$mp04
 database2006$lickert <- rowSums(database2006[,tail(items,7)])/7
 
-
+#same for 2016
 database2016 <- database2016[complete.cases(database2016),items]
 database2016$mp04 = 7 + 1 - database2016$mp04
 database2016$mp04 = 7 + 1 - database2016$mp04
 database2016$mp04 = 7 + 1 - database2016$mp04
 database2016$lickert <- rowSums(database2016[,tail(items,7)])/7
 
+#creating a new data frame to count every possible age group in combination with there lickert values
 df <- as.data.frame(do.call(rbind, list(c(0,0,0,0,0,0,0))))
 colnames(df) <- c("1", "2", "3","4","5","6","7")
 for(i in 1:5){
   df <- rbind(df, c(0,0,0,0,0,0,0))
 }
+#name the rows accordingly
 rownames(df) <- c("18-25", "26-35", "36-45", "46-55", "56-65", "66+")
 
+#count how many people have what kind of opinion out of every age group
 for(i in 1:nrow(database2006)){
   age <- database2006[i,"age"]
   dlickert <- as.character(round(as.double(database2006[i,"lickert"])))
@@ -64,6 +69,7 @@ for(i in 1:nrow(database2006)){
   }
 }
 
+#add columns for percentages
 df$p1 <- 0
 df$p2 <- 0 
 df$p3 <- 0
@@ -72,6 +78,7 @@ df$p5 <- 0
 df$p6 <- 0
 df$p7 <- 0
 
+#calc percentages
 for(i in 1:nrow(df)){
   df[i,"p1"] <- df[i,"1"]/(df[i,"1"]+df[i,"2"]+df[i,"3"]+df[i,"4"]+df[i,"5"]+df[i,"6"]+df[i,"7"]) 
   df[i,"p2"] <- df[i,"2"]/(df[i,"1"]+df[i,"2"]+df[i,"3"]+df[i,"4"]+df[i,"5"]+df[i,"6"]+df[i,"7"])
@@ -81,7 +88,7 @@ for(i in 1:nrow(df)){
   df[i,"p6"] <- df[i,"6"]/(df[i,"1"]+df[i,"2"]+df[i,"3"]+df[i,"4"]+df[i,"5"]+df[i,"6"]+df[i,"7"])
   df[i,"p7"] <- df[i,"7"]/(df[i,"1"]+df[i,"2"]+df[i,"3"]+df[i,"4"]+df[i,"5"]+df[i,"6"]+df[i,"7"])
 }
-
+#add a new dataframe to prep data for ggplot
 dfc06 <- data.frame(alter = 1:6,
                     sehrschlecht = df$`1`,
                     schlecht = df$`2`,
@@ -105,7 +112,8 @@ dfp06 <- data.frame(alter = 1:6,
 
 dfp06 <- melt(dfp06 ,  id.vars = 'alter', variable.name = 'EinstellungAsyl')
 
-pc_06 <- dfc06 %>% mutate(EinstellungAsyl = factor(EinstellungAsyl)) %>% #we need to factor our data so ggplot can work with it
+#plot the data
+pc_06 <- dfc06 %>% mutate(EinstellungAsyl = factor(EinstellungAsyl)) %>% #we need to factor our data
   ggplot() +
   aes(x = alter, y = value, fill = EinstellungAsyl) + #specify the axsis and the variable where to find the number of interviewees
   geom_bar(stat = "identity") + #tell ggplot its a bar plot
@@ -131,6 +139,7 @@ pp_06
 #reset the dataframe
 df[,] <- 0
 
+#do the calcualtions for our 2016 data
 for(i in 1:nrow(database2016)){
   age <- database2016[i,"age"]
   dlickert <- as.character(round(as.double(database2016[i,"lickert"])))
@@ -214,5 +223,6 @@ pp_16 <- ggplot(dfp16, aes(x = alter, y = value, fill = factor(EinstellungAsyl),
   theme(legend.position = "none") +
   geom_text(size = 3, position = position_stack(vjust = 0.5)) #set the corresponding values to the plot
 
+#plot everything together
 plot_grid(pp_16, pc_16, pp_06, pc_06, labels = c("16", "16", "06", "06"))
 
